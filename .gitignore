@@ -1,3 +1,7 @@
-# Virtual environment
+# Python virtual environments
 venv/
-.env/
+env/
+.venv/
+
+# Environment variables
+.env
