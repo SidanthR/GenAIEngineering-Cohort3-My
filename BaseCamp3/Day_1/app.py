@@ -4,6 +4,10 @@ import uvicorn
 
 app = FastAPI()
 
+@app.get("/")
+async def read_root():
+    return {"message": "Hello World"}
+
 @app.get("/add")
 def add(x, y):
     result = float(x) + float(y)
@@ -42,3 +46,5 @@ if __name__ == "__main__":
     # y = sys.argv[2]
     # print( add(int(x), int(y)) )
     uvicorn.run(app, host='0.0.0.0', port=9321)
+    #we can run the app using: python app.py
+    #or "fastapi dev app.py" 
