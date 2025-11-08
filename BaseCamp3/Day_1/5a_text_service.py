@@ -54,7 +54,7 @@ def subtract(text: TextInput):
 @app.get("/")
 def read_root():
     """Root endpoint that returns a welcome message."""
-    return {"message": "Calculator API is running. Use /add or /subtract endpoints."}
+    return {"message": "Text Calculator API is running. Use /count or /split endpoints."}
 
 
 # Main program
