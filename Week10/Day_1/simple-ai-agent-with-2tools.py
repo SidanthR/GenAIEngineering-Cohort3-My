@@ -96,15 +96,13 @@ def run_agent(user_query):
     
     # Send query to LLM with available tools
     response = openai_client.chat.completions.create(
-        # model="gpt-4o-mini",
-        model="gpt-3.5-turbo-0125",
+        model="gpt-4o-mini",
         messages=messages,
         tools=tools,
         tool_choice="auto"  # Let the model decide which tool to use
     )
     
     response_message = response.choices[0].message
-    print (f"\nLLM Response:\n{response_message}")
     
     # Check if the LLM wants to call a tool
     if response_message.tool_calls:
@@ -139,7 +137,7 @@ def run_agent(user_query):
         
         # Get final response from LLM with the tool results
         final_response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo-0125",
+            model="gpt-4o-mini",
             messages=messages
         )
         

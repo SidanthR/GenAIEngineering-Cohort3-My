@@ -25,8 +25,8 @@ async def main():
     async with async_playwright() as playwright:
         #browser_session = BrowserSession(user_data_dir= None)
 
-        # llm = ChatOpenAI(model="gpt-4o", temperature=0.2,openai_api_key=openai_api_key)
-        lm_google = Chat(model="gemini-2.0-flash", api_key=GOOGLE_API_KEY)
+        llm = ChatOpenAI(model="gpt-4o", temperature=0.2,openai_api_key=openai_api_key)
+        #lm_google = Chat(model="gemini-2.0-flash", api_key=GOOGLE_API_KEY)
         #browser_session = BrowserSession(allowed_domains=['https://dev.to'], user_data_dir= None)
         browser_session = BrowserSession(user_data_dir= None)
 
@@ -34,8 +34,7 @@ async def main():
             #task='''go to https://dev.to/ and login with Email and Password then search for AI Agents in the search bar and press enter and then print the title of first 5 blogs''',
             task = """Go to Youtube and play me a Virat Kohli Cover drive video against Australia
             """,
-            # llm=llm,
-            llm=lm_google,
+            llm=llm,
             browser_session=browser_session,
             #sensitive_data=sensitive_data,
             use_vision=False,
