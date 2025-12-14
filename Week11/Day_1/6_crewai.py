@@ -6,7 +6,7 @@ from crewai_tools import SerperDevTool
 
 
 load_dotenv()
-
+print(os.getenv("OPEN_ROUTER_KEY"))
 os.environ["OPENAI_API_KEY"] = os.getenv("OPEN_ROUTER_KEY")
 os.environ['OPENAI_API_BASE'] = 'https://openrouter.ai/api/v1'
 os.environ['OPENAI_BASE_URL'] = 'https://openrouter.ai/api/v1'
@@ -88,6 +88,9 @@ manager = Agent(
     allow_delegation=True
 )
 
+# So the flow looks like this
+# manager → planner → manager → writer → manager → editor → manager
+
 content_crew = Crew(
     agents=[planner, writer, editor],
     tasks=[plan_task, write_task, edit_task],
@@ -104,3 +107,15 @@ print(f"Agents: {[agent.role for agent in content_crew.agents]}")
 print(f"Tasks: {len(content_crew.tasks)}")
 print(topic)
 print(result)
+
+
+# 5. Summary of how the Planner’s output reaches the Writer
+# Step	Who	What happens
+# 1️⃣	Planner	Executes plan_task, produces outline
+# 2️⃣	CrewAI	Saves the planner’s result in shared context
+# 3️⃣	Manager	Reads planner’s output and decides next action
+# 4️⃣	Writer	Gets prompt that includes planner’s output as context
+# 5️⃣	CrewAI	Writer produces article → output stored again
+# 6️⃣	Editor	Receives writer’s article from context and edits
+
+# You didn’t have to wire it manually because CrewAI’s hierarchical process + context management system automatically handles the flow between agents.
