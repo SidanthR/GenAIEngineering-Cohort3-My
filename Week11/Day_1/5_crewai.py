@@ -1,20 +1,20 @@
 
 import os
-# import signal
+import signal
 
-# # Comprehensive patch for Windows compatibility
-# if not hasattr(signal, 'SIGHUP'):
-#     signal.SIGHUP = 1
-# if not hasattr(signal, 'SIGQUIT'):
-#     signal.SIGQUIT = 3
-# if not hasattr(signal, 'SIGTSTP'):
-#     signal.SIGTSTP = 20
-# if not hasattr(signal, 'SIGCONT'):
-#     signal.SIGCONT = 18
-# if not hasattr(signal, 'SIGUSR1'):
-#     signal.SIGUSR1 = 10
-# if not hasattr(signal, 'SIGUSR2'):
-#     signal.SIGUSR2 = 12
+# Comprehensive patch for Windows compatibility
+if not hasattr(signal, 'SIGHUP'):
+    signal.SIGHUP = 1
+if not hasattr(signal, 'SIGQUIT'):
+    signal.SIGQUIT = 3
+if not hasattr(signal, 'SIGTSTP'):
+    signal.SIGTSTP = 20
+if not hasattr(signal, 'SIGCONT'):
+    signal.SIGCONT = 18
+if not hasattr(signal, 'SIGUSR1'):
+    signal.SIGUSR1 = 10
+if not hasattr(signal, 'SIGUSR2'):
+    signal.SIGUSR2 = 12
 
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, LLM, Process
@@ -92,11 +92,22 @@ edit_task = Task(
     agent=editor
 )
 
+# Define Callback Functions
+def my_step_callback(step):
+    """Called after each step completes"""
+    print(f"🔄 Step completed: {step}")
+
+def my_task_callback(output):
+    """Called after each task completes"""
+    print(f"✅ Task finished! Output preview: {output.raw[:100]}...")
+
 # Create and execute the content creation crew
 content_crew = Crew(
     agents=[planner, writer, editor],
     tasks=[plan_task, write_task, edit_task],
     process=Process.sequential,
+    step_callback=my_step_callback,    # Called after each step
+    task_callback=my_task_callback,     # Called after each task
     verbose=True
 )
 

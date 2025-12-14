@@ -5,21 +5,21 @@ NO MODEL LOADING - Uses dummy embeddings for compatibility
 Uses YAML configuration files for agents and tasks
 """
 
-# import signal
+import signal
 
-# # Comprehensive patch for Windows compatibility
-# if not hasattr(signal, 'SIGHUP'):
-#     signal.SIGHUP = 1
-# if not hasattr(signal, 'SIGQUIT'):
-#     signal.SIGQUIT = 3
-# if not hasattr(signal, 'SIGTSTP'):
-#     signal.SIGTSTP = 20
-# if not hasattr(signal, 'SIGCONT'):
-#     signal.SIGCONT = 18
-# if not hasattr(signal, 'SIGUSR1'):
-#     signal.SIGUSR1 = 10
-# if not hasattr(signal, 'SIGUSR2'):
-#     signal.SIGUSR2 = 12
+# Comprehensive patch for Windows compatibility
+if not hasattr(signal, 'SIGHUP'):
+    signal.SIGHUP = 1
+if not hasattr(signal, 'SIGQUIT'):
+    signal.SIGQUIT = 3
+if not hasattr(signal, 'SIGTSTP'):
+    signal.SIGTSTP = 20
+if not hasattr(signal, 'SIGCONT'):
+    signal.SIGCONT = 18
+if not hasattr(signal, 'SIGUSR1'):
+    signal.SIGUSR1 = 10
+if not hasattr(signal, 'SIGUSR2'):
+    signal.SIGUSR2 = 12
 
 from crewai import Agent, Crew, Task, Process, LLM
 from crewai.project import CrewBase, agent, task, tool, crew, before_kickoff, after_kickoff
@@ -28,10 +28,11 @@ from datetime import datetime
 import os
 import pickle
 import hashlib
+import langchain_community
 from pathlib import Path
-from langchain.vectorstores import FAISS as LangchainFAISS
-from langchain.docstore.document import Document
-from langchain.docstore.in_memory import InMemoryDocstore
+from langchain_community.vectorstores import FAISS as LangchainFAISS
+from langchain_community.docstore.document import Document
+from langchain_community.docstore.in_memory import InMemoryDocstore
 from pydantic import BaseModel, Field
 import pandas as pd
 from dotenv import load_dotenv

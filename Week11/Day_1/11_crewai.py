@@ -1,19 +1,19 @@
 import os
-# import signal
+import signal
 
-# # Comprehensive patch for Windows compatibility
-# if not hasattr(signal, 'SIGHUP'):
-#     signal.SIGHUP = 1
-# if not hasattr(signal, 'SIGQUIT'):
-#     signal.SIGQUIT = 3
-# if not hasattr(signal, 'SIGTSTP'):
-#     signal.SIGTSTP = 20
-# if not hasattr(signal, 'SIGCONT'):
-#     signal.SIGCONT = 18
-# if not hasattr(signal, 'SIGUSR1'):
-#     signal.SIGUSR1 = 10
-# if not hasattr(signal, 'SIGUSR2'):
-#     signal.SIGUSR2 = 12
+# Comprehensive patch for Windows compatibility
+if not hasattr(signal, 'SIGHUP'):
+    signal.SIGHUP = 1
+if not hasattr(signal, 'SIGQUIT'):
+    signal.SIGQUIT = 3
+if not hasattr(signal, 'SIGTSTP'):
+    signal.SIGTSTP = 20
+if not hasattr(signal, 'SIGCONT'):
+    signal.SIGCONT = 18
+if not hasattr(signal, 'SIGUSR1'):
+    signal.SIGUSR1 = 10
+if not hasattr(signal, 'SIGUSR2'):
+    signal.SIGUSR2 = 12
 
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, LLM
@@ -62,6 +62,10 @@ task2 = Task(
 )
 
 # Create Crew with Callbacks
+# here step_callback and task_callback are added to Crew
+# step_callback is called after each Agent step
+# task_callback is called after each Task completion
+# machine will interapt after each step and task to call respective callbacks
 crew = Crew(
     agents=[writer],
     tasks=[task1, task2],

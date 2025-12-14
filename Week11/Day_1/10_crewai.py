@@ -1,19 +1,19 @@
 import os
-# import signal
+import signal
 
-# # Comprehensive patch for Windows compatibility
-# if not hasattr(signal, 'SIGHUP'):
-#     signal.SIGHUP = 1
-# if not hasattr(signal, 'SIGQUIT'):
-#     signal.SIGQUIT = 3
-# if not hasattr(signal, 'SIGTSTP'):
-#     signal.SIGTSTP = 20
-# if not hasattr(signal, 'SIGCONT'):
-#     signal.SIGCONT = 18
-# if not hasattr(signal, 'SIGUSR1'):
-#     signal.SIGUSR1 = 10
-# if not hasattr(signal, 'SIGUSR2'):
-#     signal.SIGUSR2 = 12
+# Comprehensive patch for Windows compatibility
+if not hasattr(signal, 'SIGHUP'):
+    signal.SIGHUP = 1
+if not hasattr(signal, 'SIGQUIT'):
+    signal.SIGQUIT = 3
+if not hasattr(signal, 'SIGTSTP'):
+    signal.SIGTSTP = 20
+if not hasattr(signal, 'SIGCONT'):
+    signal.SIGCONT = 18
+if not hasattr(signal, 'SIGUSR1'):
+    signal.SIGUSR1 = 10
+if not hasattr(signal, 'SIGUSR2'):
+    signal.SIGUSR2 = 12
 
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, LLM
@@ -40,6 +40,7 @@ writer = Agent(
 )
 
 # Create Task with Human Input
+# we have added human_input=True to enable human-in-the-loop and human will interapt the task before finalizing
 writing_task = Task(
     description='Write a short article about AI. Ask human for feedback before finalizing.',
     expected_output='A polished article approved by human.',
