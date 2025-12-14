@@ -1,61 +1,199 @@
-# Software Architecture Document for News Aggregator App (software_architecture.md)
+```
+# Expense Tracking Application - Comprehensive Software Architecture Document
+
+---
+
+## Table of Contents
+
+1. System Architecture Overview  
+2. Component Architecture and Microservices Breakdown  
+3. Data Architecture and Database Design  
+4. Security Architecture and Authentication Patterns  
+5. Integration Patterns and External Service Connections  
+6. Deployment Architecture and Infrastructure Requirements  
+7. Technology Stack Justification and Alternatives Analysis  
+8. Scalability and Performance Considerations  
+9. Monitoring and Logging Architecture  
+
+---
 
 ## 1. System Architecture Overview
-The architecture follows a microservices-based approach, utilizing the following technologies:
-- **Frontend:** Streamlit for user interface development.
-- **Backend:** FastAPI for building asynchronous APIs.
-- **Database:** PostgreSQL for relational data management.
-- **Deployment:** Docker for containerization.
 
-### Overview Diagram
-![System Architecture Diagram](url_to_diagram)
+### 1.1 System Context Diagram
+
+```
++-------------------+            +----------------------+           +-------------------+
+|                   |   HTTPS    |                      |           |                   |
+|  Mobile Devices    +----------->+  Expense Tracking    +<----------+ External Services  |
+| (Streamlit SPA)    |            |  Backend API Gateway |           | - OAuth Provider   |
+|  (with offline)    |            | (FastAPI + AuthN/Z)  |           | - Notification     |
+|                   |            |                      |           |   Service (Email,  |
++-------------------+            +----------------------+           |   SMS, Push)       |
+                                    |       ^                      +-------------------+
+                                    |       |       
+                          WebSocket  |       | REST/GRPC               
+                                +------+    |                                         
+                                | Sync |<--+                                         
+                                |Service|                                           
+                                +------+                                           
+                                    |                                                
+                              +----------+                                          
+                              | Database |                                          
+                              |(PostgreSQL)|                                         
+                              +----------+          
+```
+
+### 1.2 Overview
+
+- Frontend: Streamlit app providing fast expense entry, reporting, and offline support with local caching and sync queue.  
+- Backend: API Gateway (NGINX + FastAPI Auth service) routes requests to microservices: Expense, Reporting, Sync, Notification.  
+- Database: PostgreSQL stores users, expenses, categories, sync metadata, conflict info, and audit logs.  
+- External integrations: OAuth 2.0 providers for social logins, notification systems for alerts and reminders.
+
+---
 
 ## 2. Component Architecture and Microservices Breakdown
-The application is divided into several microservices, each responsible for specific functionalities:
-- **User Service:** Manages user authentication, profiles, and preferences.
-- **News Aggregation Service:** Integrates with third-party news APIs, handles article retrieval based on user interests.
-- **Search Service:** Implements full-text search functionality with support for keyword matching and filters.
-- **Bookmark Service:** Allows users to bookmark articles for later reading.
-- **Alerts Service:** Sends notifications to users regarding new articles matching their filters.
+
+| Component               | Responsibilities                                              | Technology             |
+|------------------------|--------------------------------------------------------------|-----------------------|
+| Streamlit Frontend     | UI/UX, offline caching, expense entry, reports, notifications | Python, Streamlit      |
+| API Gateway            | TLS termination, routing, authentication, rate limiting       | NGINX, FastAPI        |
+| Auth Service           | User management, JWT token issuing & verification              | FastAPI, OAuth 2.0    |
+| Expense Microservice   | CRUD operations on expenses, validation                        | FastAPI, Python       |
+| Reporting Microservice | Aggregate data, generate charts, export CSV/Excel             | FastAPI, Pandas       |
+| Sync Microservice      | Real-time WebSocket sync, conflict detection/resolution       | FastAPI, Asyncio      |
+| Notification Service   | Budget alerts, reminders, integrate with SMTP/SMS/push APIs   | FastAPI, Celery       |
+| PostgreSQL Database    | Store all persistent data; encrypted at rest                   | PostgreSQL             |
+
+---
 
 ## 3. Data Architecture and Database Design
-- **Users Table:** Stores user credentials, preferences, and bookmarks.
-- **Articles Table:** Maintains information about news articles such as title, content, source, and tags.
-- **Bookmarks Table:** Associates users with their bookmarked articles.
-- **Alerts Table:** Keeps track of user-defined alerts.
 
-### ER Diagram
-![Database ER Diagram](url_to_er_diagram)
+### 3.1 Core Tables
+
+- **Users**: `id (UUID PK)`, `email`, `hashed_password`, timestamps  
+- **Categories**: `id (UUID PK)`, `user_id (FK)`, `name`, timestamps  
+- **Expenses**: `id (UUID PK)`, `user_id (FK)`, `category_id (FK)`, `amount_cents (BIGINT)`, `currency`, `description`, `expense_date`, `deleted (bool)`, timestamps  
+- **SyncMetadata**: Tracks last synced timestamp per device per user for incremental sync  
+- **ConflictResolution**: Records sync conflicts for manual or automatic resolution  
+- **AuditLogs**: Immutable trail of user actions for compliance  
+
+### 3.2 Schema Features
+
+- UUIDs generated by `gen_random_uuid()` for global uniqueness (offline safety).  
+- Indexes optimize filtering by user, date, category, and sync timestamps.  
+- Soft deletes allow GDPR-compliant data removal while preserving audit.  
+- Encryption-at-rest using PostgreSQL TDE or `pgcrypto`.  
+- AuditLogs support data privacy and traceability.
+
+---
 
 ## 4. Security Architecture and Authentication Patterns
-- **Authentication:** Implement OAuth2 for secure user authentication flows.
-- **Data Encryption:** Use SSL/TLS for data in transit. Encrypt sensitive data at rest in PostgreSQL using appropriate methods.
-- **Authorization:** Role-based access control (RBAC) to manage user permissions within the application.
 
-## 5. Integration Patterns and External Service Connections
-- **API Integration:** Use RESTful APIs for communication with external news sources. Handle retries and error management through circuit breaker pattern.
-- **Asynchronous Communication:** Employ message brokers (e.g., RabbitMQ) for notifications and alerts delivery.
+- OAuth 2.0 for social login (Google, Facebook) and email/password auth with hashed passwords (bcrypt).  
+- JWT tokens issued for session management, stored securely on client (HttpOnly cookies preferred).  
+- TLS 1.2+ enforced on all API communication.  
+- Role-based and user-scoped access control enforced throughout backend.  
+- Multi-factor authentication support planned (optional).  
+- Encryption at rest with key management externalized.  
+- Regular security audits and compliance to GDPR, CCPA, ISO 27001, SOC 2 standards.  
+- Input validation and rate limiting prevent attacks such as injection or brute force.
+
+---
+
+## 5. Integration Patterns and External Services Connections
+
+- OAuth 2.0 flows integrated into Auth Service via standard endpoints.  
+- Notification Service asynchronously sends alerts/reminders via external email/SMS/push APIs (e.g., Twilio, Firebase).  
+- Real-time cloud sync via WebSocket managed by Sync Microservice ensuring near-instant multi-device sync.  
+- Export functionality handled server-side by Reporting Service generating CSV and Excel via Pandas/openpyxl libraries, streamed back to frontend.  
+- Offline sync facilitated by local store on frontend and backend delta queries using last sync timestamps per device.
+
+---
 
 ## 6. Deployment Architecture and Infrastructure Requirements
-- **Containerization:** Deploy all microservices as Docker containers orchestrated via Kubernetes for scalability.
-- **Load Balancer:** Implement a load balancer to distribute incoming traffic across instances.
-- **Database:** PostgreSQL hosted on a managed cloud provider with automatic backups and scaling options.
+
+- Containerized microservices and frontend built using Python and Streamlit Docker images.  
+- Deployment orchestrated via Kubernetes or Docker Swarm with automatic scaling, rolling updates, and health checks.  
+- NGINX as API Gateway handles TLS termination, load balancing, and request routing.  
+- PostgreSQL deployed as a managed service or container with persistent volumes and automated backups; configured for high-availability with failover and read replicas.  
+- Secrets managed with Kubernetes Secrets or Vault.  
+- CI/CD pipelines automate build, test, and deployment stages.  
+- Network policies enforce least privilege between services.  
+- Monitoring and logging integrated with ELK stack, Prometheus, and Grafana.
+
+---
 
 ## 7. Technology Stack Justification and Alternatives Analysis
-- **Frontend (Streamlit):** Chosen for its rapid development capabilities and ease of creating interactive data dashboards.
-- **Backend (FastAPI):** Provides high-performance API capabilities and easy integration with modern architectures.
-- **Database (PostgreSQL):** Robust and reliable relational database with excellent support for complex queries.
-- **Deployment with Docker:** Offers consistent environments and easy scalability; Kubernetes enhances management of containerized applications.
-  
-Alternative options considered included Flask for backend (less performant than FastAPI) and MongoDB (non-relational, not suitable for structured user data).
+
+| Layer      | Chosen Technology | Justification                                                 | Alternatives Considered       |
+|------------|-------------------|---------------------------------------------------------------|------------------------------|
+| Frontend   | Streamlit         | Rapid development of interactive UI in Python, simple hosting | React/Vue.js (more complex)  |
+| Backend    | FastAPI           | High-performance, async-ready REST and WebSocket support; Python-based | Django REST Framework (heavier) |
+| Database   | PostgreSQL        | Robust relational DB with rich features, strong JSON support, scalability | MySQL, MongoDB (less suited for relational data) |
+| Deployment | Docker            | Containerization for portability and scaling                  | VM-based, Serverless         |
+
+The stack balances developer productivity, performance, scalability, and cost-effectiveness aligned with Python expertise.
+
+---
 
 ## 8. Scalability and Performance Considerations
-- **Horizontal Scaling:** Utilize Kubernetes to scale services based on demand.
-- **Caching Strategy:** Implement caching for frequently accessed data using Redis to reduce database hits and improve response times.
-- **Asynchronous Processing:** Use background processing for heavy operations (e.g., article ingestion) to maintain responsiveness.
+
+- Horizontal scaling of microservices via container orchestration.  
+- API Gateway enforces throttling and rate limits to prevent overload.  
+- Database supports read replicas to offload reporting reads.  
+- Caching strategies (e.g., Redis) could be added for frequently accessed data.  
+- Asynchronous task queues (Celery or native Asyncio) used for notifications and heavy reports.  
+- Offline-first frontend minimizes server load during unreliable connectivity.  
+- Use of WebSocket for instant sync reduces polling overhead and improves UX.
+
+---
 
 ## 9. Monitoring and Logging Architecture
-- **Logging:** Centralized logging using ELK Stack (Elasticsearch, Logstash, Kibana) for better visibility into application behavior.
-- **Monitoring:** Implement application performance monitoring (APM) tools such as Prometheus and Grafana for real-time monitoring and alerting on system health.
 
-This architecture ensures the News Aggregator App is scalable, maintainable, and secure, while providing a seamless user experience for personalized news aggregation.
+- Centralized logging with ELK (Elasticsearch, Logstash, Kibana) aggregates logs from all containers including API Gateway, microservices, and database.  
+- Prometheus scrapes metrics from FastAPI services and infrastructure; Grafana dashboards give real-time visibility.  
+- Alerts on error rates, latency spikes, and unusual auth events configured.  
+- Audit logs stored securely for compliance with query capabilities.  
+- Docker health checks and Kubernetes probes enable automated recovery.
+
+---
+
+# Appendices
+
+### Sample table creation snippet (PostgreSQL)
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    hashed_password TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Similar for categories, expenses, syncmetadata, conflicresolution, auditlogs with appropriate FKs, indexes, and constraints.
+```
+
+---
+
+# Summary
+
+This architecture delivers a modular, scalable, secure, and maintainable expense tracking application meeting all key product requirements:
+
+- Offline-capable Streamlit frontend for rapid expense entry and reporting  
+- FastAPI-based microservices with clear separation of concerns and real-time sync capabilities  
+- PostgreSQL database designed for multi-tenant data isolation, GDPR/CCPA compliance, and performant queries  
+- OAuth 2.0-based secure authentication integrated with JWTs and multi-factor readiness  
+- Containerized deployment promoting portability and horizontal scaling  
+- Robust internal and external integration patterns  
+- Comprehensive security, logging, monitoring, and compliance provisions  
+
+This design provides a solid foundation for future extension (e.g., banking integrations, AI-powered suggestions) with confidence on quality, user privacy, and operational excellence.
+
+---
+
+# End of software_architecture.md
+```
