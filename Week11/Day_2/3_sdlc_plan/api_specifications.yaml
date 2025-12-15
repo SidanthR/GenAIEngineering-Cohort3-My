@@ -1,0 +1,811 @@
+  openapi: 3.0.3
+  info:
+    title: Expense Tracking API
+    description: >
+      Comprehensive API for Expense Tracking Application backend.
+      Supports user auth, expense management, reporting exports, data sync, and notifications.
+    version: "1.0.0"
+    contact:
+      name: API Support
+      email: support@expensetrack.app
+  servers:
+    - url: https://api.expensetrack.app/api/v1
+      description: Production server (v1)
+  tags:
+    - name: Auth
+      description: User authentication and management
+    - name: Expenses
+      description: CRUD operations on Expenses and Categories
+    - name: Reporting
+      description: Reports and data export functionality
+    - name: Sync
+      description: Real-time data synchronization endpoints
+    - name: Notification
+      description: User notification preferences and alerts
+  components:
+    securitySchemes:
+      BearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
+    schemas:
+      UserBase:
+        type: object
+        required:
+          - email
+        properties:
+          email:
+            type: string
+            format: email
+          full_name:
+            type: string
+            example: Jane Doe
+      UserCreate:
+        allOf:
+          - $ref: '#/components/schemas/UserBase'
+          - type: object
+            required:
+              - password
+            properties:
+              password:
+                type: string
+                format: password
+                minLength: 8
+                example: StrongPass!23
+      User:
+        allOf:
+          - $ref: '#/components/schemas/UserBase'
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+      Token:
+        type: object
+        properties:
+          access_token:
+            type: string
+            description: JWT access token
+          token_type:
+            type: string
+            example: bearer
+      Category:
+        type: object
+        required:
+          - id
+          - name
+        properties:
+          id:
+            type: string
+            format: uuid
+          user_id:
+            type: string
+            format: uuid
+          name:
+            type: string
+            description: Name of the category
+          created_at:
+            type: string
+            format: date-time
+          updated_at:
+            type: string
+            format: date-time
+      ExpenseBase:
+        type: object
+        required:
+          - amount_cents
+          - currency
+          - expense_date
+          - category_id
+        properties:
+          category_id:
+            type: string
+            format: uuid
+          amount_cents:
+            type: integer
+            minimum: 1
+            description: Amount in cents (integer)
+          currency:
+            type: string
+            pattern: "^[A-Z]{3}$"
+            example: USD
+          description:
+            type: string
+            maxLength: 255
+          expense_date:
+            type: string
+            format: date
+            example: 2024-06-30
+      ExpenseCreate:
+        allOf:
+          - $ref: '#/components/schemas/ExpenseBase'
+      Expense:
+        allOf:
+          - $ref: '#/components/schemas/ExpenseBase'
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              user_id:
+                type: string
+                format: uuid
+              deleted:
+                type: boolean
+                default: false
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+      ErrorResponse:
+        type: object
+        required:
+          - error_code
+          - message
+        properties:
+          error_code:
+            type: string
+            example: INVALID_REQUEST
+          message:
+            type: string
+            example: Validation failed for the field 'amount_cents'
+          trace_id:
+            type: string
+            description: UUID for request tracing
+      SyncMetadata:
+        type: object
+        properties:
+          last_synced_at:
+            type: string
+            format: date-time
+            description: Last sync timestamp for device/user
+          device_id:
+            type: string
+            description: Device identifier string
+      NotificationPreference:
+        type: object
+        properties:
+          type:
+            type: string
+            enum:
+              - email
+              - push
+              - sms
+          enabled:
+            type: boolean
+          frequency:
+            type: string
+            description: Notification frequency preference
+            enum:
+              - immediate
+              - daily
+              - weekly
+              - none
+  security:
+    - BearerAuth: []
+  paths:
+    /auth/register:
+      post:
+        tags:
+          - Auth
+        summary: Register a new user
+        requestBody:
+          description: User registration data
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreate'
+        responses:
+          '201':
+            description: User created successfully
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/User'
+          '400':
+            description: Invalid input data
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+    /auth/login:
+      post:
+        tags:
+          - Auth
+        summary: User login and token issuance
+        requestBody:
+          description: User credentials
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - email
+                  - password
+                properties:
+                  email:
+                    type: string
+                    format: email
+                  password:
+                    type: string
+                    format: password
+        responses:
+          '200':
+            description: Access token issued
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Token'
+          '401':
+            description: Authentication failed
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+    /auth/logout:
+      post:
+        tags:
+          - Auth
+        summary: User logout and token revocation
+        security:
+          - BearerAuth: []
+        responses:
+          '204':
+            description: Logout successful, token revoked
+          '401':
+            description: Unauthorized
+    /auth/refresh:
+      post:
+        tags:
+          - Auth
+        summary: Refresh JWT token using refresh token
+        requestBody:
+          description: Refresh token payload
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - refresh_token
+                properties:
+                  refresh_token:
+                    type: string
+        responses:
+          '200':
+            description: New access token issued
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Token'
+          '401':
+            description: Invalid refresh token
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+    /users/me:
+      get:
+        tags:
+          - Auth
+        summary: Get current authenticated user profile
+        security:
+          - BearerAuth: []
+        responses:
+          '200':
+            description: Current user profile
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/User'
+          '401':
+            description: Unauthorized
+    /categories:
+      get:
+        tags:
+          - Expenses
+        summary: List all categories for the current user
+        security:
+          - BearerAuth: []
+        parameters:
+          - in: query
+            name: page
+            schema:
+              type: integer
+              minimum: 1
+            description: Page number for pagination
+          - in: query
+            name: per_page
+            schema:
+              type: integer
+              minimum: 1
+              maximum: 100
+            description: Items per page
+        responses:
+          '200':
+            description: List of expense categories
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Category'
+          '401':
+            description: Unauthorized
+      post:
+        tags:
+          - Expenses
+        summary: Create a new category
+        security:
+          - BearerAuth: []
+        requestBody:
+          description: Category creation payload
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    type: string
+                    example: Travel
+        responses:
+          '201':
+            description: Category created
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Category'
+          '400':
+            description: Validation error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+          '401':
+            description: Unauthorized
+    /categories/{category_id}:
+      put:
+        tags:
+          - Expenses
+        summary: Update an existing category
+        security:
+          - BearerAuth: []
+        parameters:
+          - name: category_id
+            in: path
+            required: true
+            schema:
+              type: string
+              format: uuid
+        requestBody:
+          description: Updated category data
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    type: string
+                    example: Food & Dining
+        responses:
+          '200':
+            description: Category updated
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Category'
+          '400':
+            description: Validation error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+          '401':
+            description: Unauthorized
+          '404':
+            description: Category not found
+      delete:
+        tags:
+          - Expenses
+        summary: Delete a category
+        security:
+          - BearerAuth: []
+        parameters:
+          - name: category_id
+            in: path
+            required: true
+            schema:
+              type: string
+              format: uuid
+        responses:
+          '204':
+            description: Category deleted
+          '401':
+            description: Unauthorized
+          '404':
+            description: Category not found
+    /expenses:
+      get:
+        tags:
+          - Expenses
+        summary: List expenses with filters, pagination, and sorting
+        security:
+          - BearerAuth: []
+        parameters:
+          - in: query
+            name: page
+            schema:
+              type: integer
+              minimum: 1
+            description: Page number
+          - in: query
+            name: per_page
+            schema:
+              type: integer
+              minimum: 1
+              maximum: 100
+            description: Items per page
+          - in: query
+            name: start_date
+            schema:
+              type: string
+              format: date
+            description: Filter expenses from this date (inclusive)
+          - in: query
+            name: end_date
+            schema:
+              type: string
+              format: date
+            description: Filter expenses up to this date (inclusive)
+          - in: query
+            name: category_id
+            schema:
+              type: string
+              format: uuid
+            description: Filter expenses by category
+          - in: query
+            name: include_deleted
+            schema:
+              type: boolean
+              default: false
+            description: Include soft deleted expenses
+          - in: query
+            name: sort_by
+            schema:
+              type: string
+              enum:
+                - expense_date
+                - amount_cents
+                - created_at
+            description: Sort field
+          - in: query
+            name: sort_order
+            schema:
+              type: string
+              enum:
+                - asc
+                - desc
+            description: Sort order
+        responses:
+          '200':
+            description: List of expenses
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Expense'
+          '401':
+            description: Unauthorized
+      post:
+        tags:
+          - Expenses
+        summary: Create a new expense
+        security:
+          - BearerAuth: []
+        requestBody:
+          description: Expense creation payload
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseCreate'
+        responses:
+          '201':
+            description: Expense created
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Expense'
+          '400':
+            description: Validation error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+          '401':
+            description: Unauthorized
+    /expenses/{expense_id}:
+      get:
+        tags:
+          - Expenses
+        summary: Retrieve a single expense by ID
+        security:
+          - BearerAuth: []
+        parameters:
+          - name: expense_id
+            in: path
+            required: true
+            schema:
+              type: string
+              format: uuid
+        responses:
+          '200':
+            description: Expense details
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Expense'
+          '401':
+            description: Unauthorized
+          '404':
+            description: Expense not found
+      put:
+        tags:
+          - Expenses
+        summary: Update an existing expense
+        security:
+          - BearerAuth: []
+        parameters:
+          - name: expense_id
+            in: path
+            required: true
+            schema:
+              type: string
+              format: uuid
+        requestBody:
+          description: Updated expense data
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseBase'
+        responses:
+          '200':
+            description: Expense updated
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Expense'
+          '400':
+            description: Validation error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+          '401':
+            description: Unauthorized
+          '404':
+            description: Expense not found
+      delete:
+        tags:
+          - Expenses
+        summary: Soft delete an expense
+        security:
+          - BearerAuth: []
+        parameters:
+          - name: expense_id
+            in: path
+            required: true
+            schema:
+              type: string
+              format: uuid
+        responses:
+          '204':
+            description: Expense soft deleted
+          '401':
+            description: Unauthorized
+          '404':
+            description: Expense not found
+    /reporting/exports:
+      post:
+        tags:
+          - Reporting
+        summary: Generate report export (CSV, XLSX)
+        security:
+          - BearerAuth: []
+        requestBody:
+          description: Export request parameters
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - format
+                properties:
+                  format:
+                    type: string
+                    description: Export file format
+                    enum:
+                      - csv
+                      - xlsx
+                  start_date:
+                    type: string
+                    format: date
+                  end_date:
+                    type: string
+                    format: date
+                  category_ids:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                  filters:
+                    type: object
+                    additionalProperties: true
+        responses:
+          '202':
+            description: Export job accepted, processing asynchronously
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    job_id:
+                      type: string
+                      example: "export-job-12345"
+          '400':
+            description: Validation error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+          '401':
+            description: Unauthorized
+    /reporting/exports/{job_id}:
+      get:
+        tags:
+          - Reporting
+        summary: Get export job status or download file if ready
+        security:
+          - BearerAuth: []
+        parameters:
+          - name: job_id
+            in: path
+            required: true
+            schema:
+              type: string
+        responses:
+          '200':
+            description: Export job status or file stream if completed
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum:
+                        - pending
+                        - completed
+                        - failed
+                    download_url:
+                      type: string
+                      format: uri
+                      nullable: true
+                    error_message:
+                      type: string
+                      nullable: true
+          '404':
+            description: Job not found
+    /sync/metadata:
+      get:
+        tags:
+          - Sync
+        summary: Get last sync metadata for current user and device
+        security:
+          - BearerAuth: []
+        parameters:
+          - in: query
+            name: device_id
+            schema:
+              type: string
+            description: Device identifier
+            required: true
+        responses:
+          '200':
+            description: Sync metadata
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/SyncMetadata'
+          '401':
+            description: Unauthorized
+          '404':
+            description: Metadata not found
+      put:
+        tags:
+          - Sync
+        summary: Update last sync timestamp for device/user
+        security:
+          - BearerAuth: []
+        requestBody:
+          description: Sync metadata update payload
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncMetadata'
+        responses:
+          '204':
+            description: Sync metadata updated
+          '401':
+            description: Unauthorized
+    /notifications/preferences:
+      get:
+        tags:
+          - Notification
+        summary: Get current user's notification preferences
+        security:
+          - BearerAuth: []
+        responses:
+          '200':
+            description: List of preferences
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NotificationPreference'
+          '401':
+            description: Unauthorized
+      put:
+        tags:
+          - Notification
+        summary: Update notification preferences for the current user
+        security:
+          - BearerAuth: []
+        requestBody:
+          description: Notification preference array
+          required: true
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationPreference'
+        responses:
+          '204':
+            description: Preferences updated
+          '400':
+            description: Validation error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+          '401':
+            description: Unauthorized
+  x-rate-limiting:
+    description: >
+      Requests are limited to 100 per minute per user. Exceeding limits will yield HTTP 429 Too Many Requests.
+      Clients should back off and retry after the indicated Retry-After header.
+  externalDocs:
+    description: FastAPI Documentation and Examples
+    url: https://fastapi.tiangolo.com/

@@ -1,0 +1,46 @@
+20:06:46 From Ramanathan Rm to Everyone:
+	Model Owners/builders/provide - wholesalers
+	OpenAI
+	Mistral
+	Gemini
+	Meta
+	Anthropic
+	Deepseek
+	Qwen
+	Grok
+	
+	Model Aggregators - retailers
+	Groq
+	open-router
+20:07:02 From Ramanathan Rm to Everyone:
+	Instruct/Chat Models - Predicts right next word
+	what is capital of England? 
+	The capital of England is London 
+	
+	Embedding Models
+	Numerical(Vector) Representation of any language expression
+20:07:14 From Ramanathan Rm to Everyone:
+	Free Models vs Pay-as-you-go Models
+20:07:25 From Ramanathan Rm to Everyone:
+	what Large Langugage Models cannot do?
+	Decision challenge - 
+	what color bottom will suit my purple tops?  give me choices
+	
+	Act Challenge -
+	Read the mail from my vendor and give me mail draft to respond
+20:07:41 From Ramanathan Rm to Everyone:
+	PERFECT AI Agents(lots of money) - Write a python program to do the following
+	1. will use LLM
+	2. will take decision
+	3. will act upon it
+	4. Keep Human-in-the-loop where adviced
+20:07:52 From Ramanathan Rm to Everyone:
+	Agentic AI - Choice of Framework
+	Simplify AI Agents for Building Application
+	
+	CrewAI - New Developer friendly, simple function/apis, fewer lines of code but not flexible
+	https://www.agno.com/ - somewhere in-between
+	Langgraph - write lot of code, you have flexibility
+	
+	https://haystack.deepset.ai/
+	https://www.llamaindex.ai/
