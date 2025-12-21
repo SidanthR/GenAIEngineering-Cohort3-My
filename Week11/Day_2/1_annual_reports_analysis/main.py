@@ -46,6 +46,10 @@ from abc import ABC, abstractmethod
 
 
 
+# import signal
+
+
+
 warnings.filterwarnings('ignore')
 
 # Load environment variables
@@ -53,8 +57,8 @@ load_dotenv()
 
 os.environ["OPEN_ROUTER_KEY"] = os.getenv("OPEN_ROUTER_KEY")
 os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY")
-# os.environ['HUGGINGFACEHUB_API_TOKEN'] = os.getenv('HF_TOKEN')
-# os.environ['LITELLM_LOG'] = 'DEBUG'
+os.environ['HUGGINGFACEHUB_API_TOKEN'] = os.getenv('HF_TOKEN')
+os.environ['LITELLM_LOG'] = 'DEBUG'
 os.environ['OPENAI_API_BASE'] = 'https://openrouter.ai/api/v1'
 os.environ['OPENAI_BASE_URL'] = 'https://openrouter.ai/api/v1'
 
@@ -222,7 +226,7 @@ class FinancialAdvisorRAGCrew():
         self._setup_rag_system()
 
         # Initialize CrewBase parent
-        super().__init__()
+        # super().__init__()
 
     def _check_for_existing_index(self) -> bool:
         """Check if a FAISS index exists"""
