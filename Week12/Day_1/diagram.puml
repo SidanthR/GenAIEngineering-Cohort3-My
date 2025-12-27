@@ -1,0 +1,46 @@
+@startuml
+actor User
+
+User -> pd: read_csv('imdb.csv')
+activate pd
+create dataframe
+
+User -> nx: Graph()
+activate nx
+create graph
+
+loop for each movie in dataframe
+    nx -> nx : add_node(Movie)
+    nx -> nx : add_nodes_and_edges(Director, Genres, Actors)
+    activate add_edges
+    
+    add_edges -> nx : add_node(Director)
+    add_edges -> nx : add_edge(Movie -> Director)
+    
+    add_edges -> nx : add_node(Genre(s))
+    add_edges -> nx : add_edge(Movie -> Genre(s))
+    
+    add_edges -> nx : add_node(Actor(s))
+    add_edges -> nx : add_edge(Movie -> Actor(s))
+    deactivate add_edges
+end
+deactivate nx
+
+User -> plt: figure()
+activate plt
+
+plt -> nx: spring_layout()
+plt -> nx: draw_networkx_edges()
+
+loop draw nodes
+    nx -> plt: scatter()
+end
+
+loop draw labels
+    nx -> plt: text()
+end
+
+plt -> User: savefig()
+plt -> User: show()
+deactivate plt
+@enduml
